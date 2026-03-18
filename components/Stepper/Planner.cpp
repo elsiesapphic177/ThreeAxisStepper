@@ -286,7 +286,10 @@ bool Planner::moveTo(const Vec3 &position, float speed, TickType_t timeout)
     PlannerState currentState = getState();
     if(currentState != NORMAL && currentState != FLUSHING && currentState != IDLE)
         return false;
-
+    if(currentState == IDLE && uxQueueSpacesAvailable(moveQueue) == 0){
+        // If idle and no space, we need to notify the planner task to start before we can push the new command
+        xTaskNotify(plannerTaskHandle, NOTIFY_START, eSetValueWithOverwrite);
+    }
     Command cmd{Command::Move, position, speed};
     if(xQueueSend(moveQueue, &cmd, timeout) != pdTRUE)
         return false;
@@ -298,7 +301,10 @@ bool Planner::addWait(float time_s, TickType_t timeout)
     PlannerState currentState = getState();
     if(currentState != NORMAL && currentState != FLUSHING && currentState != IDLE)
         return false;
-
+    if(currentState == IDLE && uxQueueSpacesAvailable(moveQueue) == 0){
+        // If idle and no space, we need to notify the planner task to start before we can push the new command
+        xTaskNotify(plannerTaskHandle, NOTIFY_START, eSetValueWithOverwrite);
+    }
     Command cmd{Command::Wait, {}, time_s};
     if(xQueueSend(moveQueue, &cmd, timeout) != pdTRUE)
         return false;
@@ -312,6 +318,10 @@ bool Planner::addCallback(FixedFunction<void()> cb, TickType_t timeout)
         return false;
     if(!callbackBuffer.push(std::move(cb), timeout))
         return false;
+    if(currentState == IDLE && uxQueueSpacesAvailable(moveQueue) == 0){
+        // If idle and no space, we need to notify the planner task to start before we can push the new command
+        xTaskNotify(plannerTaskHandle, NOTIFY_START, eSetValueWithOverwrite);
+    }
     Command cmd{Command::Callback, {}, {}};
     if(xQueueSend(moveQueue, &cmd, timeout) != pdTRUE){
         callbackBuffer.pop_back(); // rollback callback buffer if queue send fails
@@ -326,9 +336,15 @@ bool Planner::flush(bool waitForCompletion, TickType_t timeout)
     if(currentState != NORMAL && currentState != FLUSHING && currentState != IDLE)
         return false;
     Command cmd{Command::Flush, {}, {}};
+    bool hasNotify = false;
+    if(currentState == IDLE && uxQueueSpacesAvailable(moveQueue) == 0){
+        // If idle and no space to flush, we need to notify the planner task to start flushing before we can push the flush command
+        xTaskNotify(plannerTaskHandle, NOTIFY_START, eSetValueWithOverwrite);
+        hasNotify = true;
+    }
     if(xQueueSend(moveQueue, &cmd, timeout) != pdTRUE)
         return false;
-    if(currentState == IDLE){
+    if(currentState == IDLE && !hasNotify){
         xTaskNotify(plannerTaskHandle, NOTIFY_START, eSetValueWithOverwrite);
     }
     if(waitForCompletion)
