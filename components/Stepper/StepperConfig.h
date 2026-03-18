@@ -5,9 +5,9 @@
 #define GPIO_OUTPUT_LOCK false // set to true to disable pin output but keep all other functions, for testing
 
 // Pulse generator configuration
-#define PULSE_QUEUE_LENGTH 16 // Must be a power of 2 for FastISRQueue, and should be large enough to hold pending pulses without overflow.
+#define PULSE_QUEUE_LENGTH 32 // Must be a power of 2 for FastISRQueue, and should be large enough to hold pending pulses without overflow.
 static const uint32_t StepPulseWidth = 20;          // us
-static const uint32_t PulsePrepareTime = 50;         // us, time for force-enable/disable decision
+static const uint32_t PulsePrepareTime = 20;         // us, time for force-enable/disable decision
 static const uint32_t PulseAlarmDelay = 1000000;  // us (1s), alarm when pulse queue full
 
 // Stepper configuration

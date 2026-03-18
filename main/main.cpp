@@ -735,7 +735,6 @@ static void test_jog_low_speed(Planner& planner)
     vTaskDelay(pdMS_TO_TICKS(500));
 }
 
-
 // ---------------------------------------------------------------------------
 // Test 25: Stable three axis move
 // ---------------------------------------------------------------------------
@@ -843,6 +842,22 @@ static void test_wait(Planner& planner)
         ESP_LOGE(TAG, "  FAIL multi-wait elapsed %lld ms < 600", elapsed_ms);
 
     vTaskDelay(pdMS_TO_TICKS(500));
+}
+
+// ---------------------------------------------------------------------------
+// Test 27: maximum pulse frequency
+// ---------------------------------------------------------------------------
+static void test_maximum_pulse_frequency(Planner& planner)
+{
+    ESP_LOGI(TAG, "====== TEST 27: Maximum Pulse Frequency ======");
+    pulseLoopPin();
+    planner.reset();
+    planner.setMaxSpeed(1000); // set very high speed to test pulse generation limits
+    // 10 us interval = 100 kHz pulse frequency , *0.005 mm/step = 500 mm/s
+    planner.moveTo(Vec3{500,0,0},100);// 20k hz is about the max we can do , bottleneck is likely the BisectionStepper
+    planner.flush(true);
+    assertPos(planner, Vec3{500,0,0}, "X=500 at max pulse frequency");
+    vTaskDelay(pdMS_TO_TICKS(1000));
 }
 
 // ===========================================================================
