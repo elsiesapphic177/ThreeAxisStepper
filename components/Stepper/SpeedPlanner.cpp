@@ -35,6 +35,7 @@ void JunctionDeviationPlanner::init() {
 
 void JunctionDeviationPlanner::reset() {
     blocks.clear();
+    callbackBuffer.clear();
     previousDirection    = Vec3{0,0,0};
     previousNominalSpeed = 0;
     previousExitSpeed    = 0;
