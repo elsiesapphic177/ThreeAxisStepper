@@ -14,7 +14,7 @@ protected:
 
     float velocityOffset{0};// for pid control
     float accumulateVelocityOffset{0};// for pid control in subSpeedProfile
-    inline float getIntegrate(const SpeedProfile* sp, float t){ return sp->integrate(t) + velocityOffset * t + accumulateVelocityOffset; }
+    inline float getIntegrate(const SpeedProfile* sp, float t){ return sp->integrate(t) + velocityOffset * t; }
     inline float getSpeed(const SpeedProfile* sp, float t){ return sp->getSpeed(t) + velocityOffset; }
 public:
     virtual ~BaseStepper() = default;
@@ -29,7 +29,7 @@ public:
     virtual void setPosition(float position) = 0;
     PulseGenerator* getPulseGen() const { return targetPulseGen; }
 
-    float getAccumulatedStep()const{return accumulatedStep + accumulateVelocityOffset;}
+    float initSubSpeedProfile();
     virtual void sendPulse(const SubSpeedProfile& sp,float startAccumulatedStep, int64_t initTime) = 0;
 };
 

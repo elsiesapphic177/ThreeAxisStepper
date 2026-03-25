@@ -17,6 +17,12 @@ void BaseStepper::setVelocityOffset(float offset)
     velocityOffset = offset;
 }
 
+float BaseStepper::initSubSpeedProfile() 
+{
+    accumulateVelocityOffset = 0;
+    return accumulatedStep;
+}
+
 #if NewtonStepperAvailable
 const char* NewtonStepper::stepperTag = "NewtonStepper";
 void NewtonStepper::resetTimer()
@@ -24,6 +30,7 @@ void NewtonStepper::resetTimer()
     targetPulseGen->reset();
     velocityOffset = 0;
     accumulatedStep = AccumulatedStepInit;
+    accumulateVelocityOffset = 0;
 }
 
 float NewtonStepper::findZeroSpeed(const SpeedProfile *sp, float t0, float t1, bool t0Positive)
@@ -139,9 +146,7 @@ void NewtonStepper::sendPulse(const SpeedProfile* sp,int64_t initTime)
 void NewtonStepper::sendPulse(const SubSpeedProfile &sp, float startAccumulatedStep, int64_t initTime)
 {
     if(targetPulseGen == nullptr || sp.totalTime <= 0) return;
-    if(sp.getTrimStartTimeUs() == 0)
-        accumulateVelocityOffset = 0;
-    float finalStep = accumulatedStep + sp.getAxisEndIntegrate() * StepUnitInv;
+    float finalStep = startAccumulatedStep + (sp.getAxisEndIntegrate() + accumulateVelocityOffset + velocityOffset * sp.totalTime) * StepUnitInv;
     if(static_cast<int>(floorf(finalStep)) == static_cast<int>(ceilf(finalStep))){ // integer step, refine to avoid precision error
         finalStep = std::nextafterf(finalStep, getSpeed(&sp, sp.totalTime) > 0 ? finalStep - 1 : finalStep + 1);
     }
@@ -208,14 +213,14 @@ void BisectionStepper::resetTimer()
     targetPulseGen->reset();
     velocityOffset = 0;
     accumulatedStep = AccumulatedStepInit;
+    accumulateVelocityOffset = 0;
 }
 
 void BisectionStepper::sendPulse(const SpeedProfile *sp, int64_t initTime)
 {
     if(targetPulseGen == nullptr || sp == nullptr || sp->totalTime <= 0) return;
 
-    float dStep = getIntegrate(sp, sp->totalTime) * StepUnitInv;
-    float finalStep = accumulatedStep + dStep;
+    float finalStep = accumulatedStep + getIntegrate(sp, sp->totalTime) * StepUnitInv;
     bool increaseFlag = finalStep > accumulatedStep;
     if(static_cast<int>(floorf(finalStep)) == static_cast<int>(ceilf(finalStep))){ // integer step, refine to avoid precision error
         finalStep = std::nextafterf(finalStep, increaseFlag ? finalStep - 1 : finalStep + 1);
@@ -244,9 +249,7 @@ void BisectionStepper::sendPulse(const SpeedProfile *sp, int64_t initTime)
 void BisectionStepper::sendPulse(const SubSpeedProfile &sp, float startAccumulatedStep, int64_t initTime)
 {
     if(targetPulseGen == nullptr || sp.totalTime <= 0) return;
-    if(sp.getTrimStartTimeUs() == 0)
-        accumulateVelocityOffset = 0;
-    float finalStep = startAccumulatedStep + sp.getAxisEndIntegrate() * StepUnitInv;
+    float finalStep = startAccumulatedStep + (sp.getAxisEndIntegrate() + accumulateVelocityOffset + velocityOffset * sp.totalTime) * StepUnitInv;
     bool increaseFlag = finalStep > accumulatedStep;
     if(static_cast<int>(floorf(finalStep)) == static_cast<int>(ceilf(finalStep))){ // integer step, refine to avoid precision error
         finalStep = std::nextafterf(finalStep, increaseFlag ? finalStep - 1 : finalStep + 1);
@@ -367,14 +370,14 @@ void BrentStepper::resetTimer()
     targetPulseGen->reset();
     velocityOffset = 0;
     accumulatedStep = AccumulatedStepInit;
+    accumulateVelocityOffset = 0;
 }
 
 void BrentStepper::sendPulse(const SpeedProfile *sp, int64_t initTime)
 {
     if(targetPulseGen == nullptr || sp == nullptr || sp->totalTime <= 0) return;
 
-    float dStep = getIntegrate(sp, sp->totalTime) * StepUnitInv;
-    float finalStep = accumulatedStep + dStep;
+    float finalStep = accumulatedStep + getIntegrate(sp, sp->totalTime) * StepUnitInv;
     bool increaseFlag = finalStep > accumulatedStep;
     if(static_cast<int>(floorf(finalStep)) == static_cast<int>(ceilf(finalStep))){
         finalStep = std::nextafterf(finalStep, increaseFlag ? finalStep - 1 : finalStep + 1);
@@ -403,9 +406,7 @@ void BrentStepper::sendPulse(const SpeedProfile *sp, int64_t initTime)
 void BrentStepper::sendPulse(const SubSpeedProfile &sp, float startAccumulatedStep, int64_t initTime)
 {
     if(targetPulseGen == nullptr || sp.totalTime <= 0) return;
-    if(sp.getTrimStartTimeUs() == 0)
-        accumulateVelocityOffset = 0;
-    float finalStep = startAccumulatedStep + sp.getAxisEndIntegrate() * StepUnitInv;
+    float finalStep = startAccumulatedStep + (sp.getAxisEndIntegrate() + accumulateVelocityOffset + velocityOffset * sp.totalTime) * StepUnitInv;
     bool increaseFlag = finalStep > accumulatedStep;
     if(static_cast<int>(floorf(finalStep)) == static_cast<int>(ceilf(finalStep))){
         finalStep = std::nextafterf(finalStep, increaseFlag ? finalStep - 1 : finalStep + 1);
@@ -547,6 +548,7 @@ void ImprovedBisectionStepper::resetTimer()
     targetPulseGen->reset();
     velocityOffset = 0;
     accumulatedStep = AccumulatedStepInit;
+    accumulateVelocityOffset = 0;
 }
 
 void ImprovedBisectionStepper::sendPulse(const SpeedProfile* sp, int64_t initTime)
@@ -570,7 +572,7 @@ void ImprovedBisectionStepper::sendPulse(const SpeedProfile* sp, int64_t initTim
 
     if(N > 0 && N <= MAX_PULSES_PER_INTERVAL){
         solveAndEmit(sp, initTime, 0LL, initStep, N, increaseFlag,
-                     getIntegrate(sp, 0.0f), f_end, sp->totalTime);
+                     0, f_end, sp->totalTime);
     } else {
         // Fallback: plain bisection (N=0 or N>MAX is not expected in normal use)
         float t = 0;
@@ -599,10 +601,9 @@ void ImprovedBisectionStepper::sendPulse(const SpeedProfile* sp, int64_t initTim
 void ImprovedBisectionStepper::sendPulse(const SubSpeedProfile& sp, float startAccumulatedStep, int64_t initTime)
 {
     if(targetPulseGen == nullptr || sp.totalTime <= 0) return;
-    if(sp.getTrimStartTimeUs() == 0) accumulateVelocityOffset = 0;
 
-    const float f_end = getIntegrate(&sp, sp.totalTime);
-    float finalStep = startAccumulatedStep + sp.getAxisEndIntegrate() * StepUnitInv;
+    const float f_end = sp.getAxisEndIntegrate() + accumulateVelocityOffset + velocityOffset * sp.totalTime;
+    float finalStep = startAccumulatedStep + f_end * StepUnitInv;
     const bool increaseFlag = finalStep > accumulatedStep;
     if(static_cast<int>(floorf(finalStep)) == static_cast<int>(ceilf(finalStep)))
         finalStep = std::nextafterf(finalStep, increaseFlag ? finalStep - 1 : finalStep + 1);
@@ -618,7 +619,7 @@ void ImprovedBisectionStepper::sendPulse(const SubSpeedProfile& sp, float startA
 
     if(N > 0 && N <= MAX_PULSES_PER_INTERVAL){
         solveAndEmit(&sp, initTime, sp.getTrimStartTimeUs(), initStep, N, increaseFlag,
-                     getIntegrate(&sp, 0.0f), f_end, sp.totalTime);
+                     0, f_end, sp.totalTime);
     } else {
         float t = 0;
         while(true){
@@ -917,7 +918,7 @@ void ThreeAxisStepper::Impl::stepperTask(void *arg)
         stepper->subProfile = stepper->currentProfile->getSubProfile();
         stepper->subProfile.resetTrim();
         for(int i=0;i<3;i++){
-            stepper->accumulatedStep[i] = stepper->axisGen[i]->getAccumulatedStep();
+            stepper->accumulatedStep[i] = stepper->axisGen[i]->initSubSpeedProfile();
         }
     }
     StepperDutySignalOff();
